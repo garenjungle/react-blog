@@ -55,7 +55,7 @@ exports.list = async (ctx) => {
       .skip((page - 1) * 10)
       .lean()
       .exec();
-    const postCount = await Post.count().exec();
+    const postCount = await Post.estimatedDocumentCount.exec();
     ctx.set('Last-Page', Math.ceil(postCount / 10));
 
     const limitBodyLength = post => ({
