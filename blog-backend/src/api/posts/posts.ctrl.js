@@ -43,28 +43,39 @@ exports.write = async (ctx) => {
 };
 
 exports.list = async (ctx) => {
+  // page가 주어지지 않았다면 1로 간주
+  // query는 문자열 형태로 받아 오므로 숫자로 변환
   const page = parseInt(ctx.query.page || 1, 10);
+  const { tag } = ctx.query;
+
+  const query = tag
+    ? {
+      tags: tag, // tags 배열에 tag를 가진 포스트 찾기
+    }
+    : {};
+
+  // 잘못된 페이지가 주어졌다면 오류
   if (page < 1) {
     ctx.status = 400;
     return;
   }
   try {
-    const posts = await Post.find()
+    const posts = await Post.find(query)
       .sort({ _id: -1 })
       .limit(10)
       .skip((page - 1) * 10)
       .lean()
       .exec();
-    const postCount = await Post.estimatedDocumentCount.exec();
-    ctx.set('Last-Page', Math.ceil(postCount / 10));
-
+    const postCount = await Post.estimatedDocumentCount(query).exec();
     const limitBodyLength = post => ({
       ...post,
       body:
-        post.body.length < 200 ? post.body : `${post.body.slice(0, 200)}...`,
+        post.body.length < 350 ? post.body : `${post.body.slice(0, 350)}...`,
     });
-
     ctx.body = posts.map(limitBodyLength);
+    // 마지막 페이지 알려 주기
+    // ctx.set 은 response header를 설정
+    ctx.set('Last-Page', Math.ceil(postCount / 10));
   } catch (e) {
     ctx.throw(500, e);
   }
